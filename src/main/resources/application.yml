@@ -1,7 +1,7 @@
 app:
     package: com.grooveyman.crud
     page-size: 10
-    
+
 spring:
     application:
         name: crud
@@ -9,8 +9,15 @@ spring:
         url: jdbc:mysql://localhost:3306/store_api
         username: root
         password: JLoopz419#
+        driver-class-name: com.mysql.cj.jdbc.Driver
+    test:
+        database: 
+          replace: NONE
     jpa:
         show-sql: true
         hibernate:
             ddl-auto: update
-        
+    security:
+        user:
+            name: admin
+            password: "$2a$10$/uniQ3k58PgE9wB9EH0VJuzQFJGGpe.fy.vRq3mzty5a8qlUfHSsq"

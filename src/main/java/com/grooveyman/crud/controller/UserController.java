@@ -4,8 +4,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.grooveyman.crud.model.User;
 import com.grooveyman.crud.repository.UserRepository;
+import com.grooveyman.crud.util.ErrorHandler;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -24,9 +27,11 @@ import jakarta.persistence.EntityNotFoundException;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping
@@ -61,14 +66,41 @@ public class UserController {
                     || user.getEmail().isEmpty() || user.getPassword() == null || user.getPassword().isEmpty()) {
                 throw new IllegalArgumentException("Name/email/password is mandatory");
             }
+
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
             userRepository.save(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (IllegalArgumentException e) {
             Map<String, String> error = new HashMap<>();
             error.put("error", "An error occurred while creating the user: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        } catch (DataIntegrityViolationException e){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorHandler.errorResponse("User with email " + user.getEmail() + " already exists"));
         }
 
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<Object> loginUser(@RequestBody User user){
+        try{
+            System.out.println("Attempting login for user: " + user.getEmail());
+            if(user.getEmail() == null || user.getEmail().isEmpty() || user.getPassword() == null || user.getPassword().isEmpty()){
+                throw new IllegalArgumentException("Email and password are required for login");
+            }
+
+            User userFound = userRepository.findByEmail(user.getEmail()).orElseThrow(()-> new EntityNotFoundException("User not found with email: " + user.getEmail()));
+            if(!passwordEncoder.matches(user.getPassword(), userFound.getPassword())){
+                throw new IllegalArgumentException("Invalid password");
+            }
+            return ResponseEntity.ok("User logged in successfully");
+
+        }catch(IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorHandler.errorResponse("An error occurred while logging in: " + e.getMessage()));
+        }
+        catch(Exception e){
+            System.out.println("Error occurred while logging in: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorHandler.errorResponse("An error occurred while logging in: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
