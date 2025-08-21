@@ -108,9 +108,7 @@ public class UserController {
         try {
             var userResponse = userRepository.findById(id);
             if (!userResponse.isPresent()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "User not found");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorHandler.errorResponse("User not found"));
             }
             User user = userResponse.get();
             user.setName(userDetails.getName());
@@ -119,9 +117,7 @@ public class UserController {
             System.out.println("updated user: " + updatedUser);
             return ResponseEntity.ok(updatedUser);
         } catch (Exception ex) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "An error occurred while updating the user: " + ex.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorHandler.errorResponse("An error occurred while updating the user: " + ex.getMessage()));
         }
     }
 
@@ -130,13 +126,9 @@ public class UserController {
         try {
             User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("User with id: "+id+" Not found"));
             userRepository.delete(user);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "User " + id +  " deleted successfully");
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(ErrorHandler.errorResponse("User " + id +  " deleted successfully"));
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "An error occurred while deleting the user: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorHandler.errorResponse("An error occurred while deleting the user: " + e.getMessage()));
         }
        
     }
